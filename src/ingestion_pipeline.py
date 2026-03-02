@@ -1,11 +1,8 @@
 import os
 from langchain_community.document_loaders import TextLoader, DirectoryLoader
-from langchain_text_splitters import TextSplitter, CharacterTextSplitter
+from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langchain_chroma import Chroma
-from dotenv import load_dotenv
 from langchain_huggingface import HuggingFaceEmbeddings
-
-load_dotenv()
 
 
 def load_documents(doc_path="docs"):
@@ -37,11 +34,11 @@ def load_documents(doc_path="docs"):
     return documents
 
 
-def split_documents(documents, chunk_size=100, chunk_overlap=0):
+def split_documents(documents, chunk_size=500, chunk_overlap=50):
     """Split documents into chunks of size chunk_size"""
     print("Splitting documents...")
 
-    text_splitter = CharacterTextSplitter(
+    text_splitter = RecursiveCharacterTextSplitter(
         chunk_size=chunk_size,
         chunk_overlap=chunk_overlap
     )
@@ -90,8 +87,6 @@ def main():
     chunks = split_documents(documents)
     #3. Embedding the files
     create_vector_store(chunks)
-
-
-
+       
 if __name__ == "__main__":
     main()

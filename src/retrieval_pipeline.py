@@ -1,28 +1,50 @@
 from langchain_chroma import Chroma
 from langchain_huggingface import HuggingFaceEmbeddings
 
-persistence_dir = "db/chroma_db"
 
-# load embedding and vector store
-embedding_model = HuggingFaceEmbeddings(model_name="all-MiniLM-L6-v2")
+def load_vector_store(persist_directory="db/chroma_db"):
+    """Load the persisted ChromaDB vector store"""
+    print("Loading vector store...")
 
-db = Chroma(
-    persist_directory=persistence_dir,
-    embedding_function=embedding_model,
-    collection_metadata={"hnsw:space": "cosine"}
-)
+    embedding_model = HuggingFaceEmbeddings(model_name="all-MiniLM-L6-v2")
 
-# search for relevent documents
-query = "In 1999, where did Google move its headquarters to?"
+    db = Chroma(
+        persist_directory=persist_directory,
+        embedding_function=embedding_model,
+        collection_metadata={"hnsw:space": "cosine"}
+    )
 
-retriever = db.as_retriever(search_kwargs={"k": 3})
+    print(f"Vector store loaded from {persist_directory}")
+    return db
 
-relevant_docs = retriever.invoke(query)
 
-print(f"Query: {query}")
-# Display result
-print("--------- Context ---------")
-for i, doc in enumerate(relevant_docs):
-    print(f"---- Document {i+1} ----")
-    print(f"    Source: {doc.metadata['source']}")
-    print(f"    Length: {len(doc.page_content)} chars") 
+def retrieve_documents(db, query, k=3):
+    """Retrieve relevant documents for a given query"""
+    print(f"Retrieving documents for: {query}")
+
+    retriever = db.as_retriever(search_kwargs={"k": k})
+    relevant_docs = retriever.invoke(query)
+
+    print(f"Found {len(relevant_docs)} relevant documents")
+    return relevant_docs
+
+
+def format_context(documents):
+    """Format retrieved documents into a single context string"""
+    return "\n\n".join(doc.page_content for doc in documents)
+
+
+def main():
+    query = "How much did Microsoft pay to acquire Github?"
+
+    db = load_vector_store()
+    relevant_docs = retrieve_documents(db, query)
+
+    print(f"\nQuery: {query}")
+    print("--------- Context ---------")
+    for i, doc in enumerate(relevant_docs):
+        print(f"Document {i}:\n{doc.page_content}\n")
+
+
+if __name__ == "__main__":
+    main()
