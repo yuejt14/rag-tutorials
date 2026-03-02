@@ -1,5 +1,6 @@
-from rag_pipeline import create_llm, build_prompt, ask
+from generation_pipeline import create_llm, build_prompt, ask
 from retrieval_pipeline import load_vector_store
+from langchain_core.messages import HumanMessage, AIMessage
 
 
 def main():
@@ -9,6 +10,8 @@ def main():
     prompt_template = build_prompt()
     print("Ready! Type 'quit' or 'exit' to stop.\n")
 
+    chat_history = []
+
     while True:
         query = input("You: ").strip()
         if not query:
@@ -17,7 +20,9 @@ def main():
             print("Goodbye!")
             break
 
-        answer = ask(query, db, llm, prompt_template)
+        answer = ask(query, db, llm, prompt_template, chat_history)
+        chat_history.append(HumanMessage(content=query))
+        chat_history.append(AIMessage(content=answer))
         print(f"\nAssistant: {answer}\n")
 
 
