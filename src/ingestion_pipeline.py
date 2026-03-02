@@ -1,19 +1,15 @@
-import os
 from langchain_community.document_loaders import TextLoader, DirectoryLoader
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langchain_chroma import Chroma
 from langchain_huggingface import HuggingFaceEmbeddings
+from config import EMBEDDING_MODEL, CHROMA_DIR, CHROMA_METADATA
 
 
 def load_documents(doc_path="docs"):
     """Load all the text files from the doc directory"""
     print(f"Loading documents from {doc_path}...")
 
-    #check if docs directory exists
-    if not os.path.exists(doc_path):
-        raise FileNotFoundError(f"{doc_path} does not exist")
-
-    # Load all .text files from the doc directory
+    # Load all .txt files from the doc directory
     loader = DirectoryLoader(
         doc_path,
         glob="*.txt",
@@ -22,8 +18,8 @@ def load_documents(doc_path="docs"):
 
     documents = loader.load()
 
-    if len(documents) == 0:
-        raise FileNotFoundError(f"Not .txt files found in {doc_path}. Please add your documents.")
+    if not documents:
+        raise FileNotFoundError(f"No .txt files found in {doc_path}. Please add your documents.")
 
     for i, doc in enumerate(documents[:2]): # show first two documents
         print(f"\nDocument {i+1}:")
@@ -59,11 +55,11 @@ def split_documents(documents, chunk_size=500, chunk_overlap=50):
 
     return chunks
 
-def create_vector_store(chunks, persist_directory="db/chroma_db"):
+def create_vector_store(chunks, persist_directory=CHROMA_DIR):
     """Create and persist ChromaDB vector store"""
     print("Creating vector store in ChromaDB...")
 
-    embedding_model = HuggingFaceEmbeddings(model_name="all-MiniLM-L6-v2")
+    embedding_model = HuggingFaceEmbeddings(model_name=EMBEDDING_MODEL)
 
     # Create Chroma Vector store
     print("---- Creating Vector Store ----")
@@ -71,12 +67,13 @@ def create_vector_store(chunks, persist_directory="db/chroma_db"):
         documents=chunks,
         embedding=embedding_model,
         persist_directory=persist_directory,
-        collection_metadata={"hnsw:space": "cosine"}
+        collection_metadata=CHROMA_METADATA,
     )
 
-    print("--- Finished createing vector store ---")
-    print(f"Vector store create and saved to {persist_directory}")
+    print("--- Finished creating vector store ---")
+    print(f"Vector store created and saved to {persist_directory}")
     return vectorstore
+
 
 def main():
     print("Ingestion pipeline")

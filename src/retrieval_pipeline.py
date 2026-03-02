@@ -1,17 +1,18 @@
 from langchain_chroma import Chroma
 from langchain_huggingface import HuggingFaceEmbeddings
+from config import EMBEDDING_MODEL, CHROMA_DIR, CHROMA_METADATA
 
 
-def load_vector_store(persist_directory="db/chroma_db"):
+def load_vector_store(persist_directory=CHROMA_DIR):
     """Load the persisted ChromaDB vector store"""
     print("Loading vector store...")
 
-    embedding_model = HuggingFaceEmbeddings(model_name="all-MiniLM-L6-v2")
+    embedding_model = HuggingFaceEmbeddings(model_name=EMBEDDING_MODEL)
 
     db = Chroma(
         persist_directory=persist_directory,
         embedding_function=embedding_model,
-        collection_metadata={"hnsw:space": "cosine"}
+        collection_metadata=CHROMA_METADATA,
     )
 
     print(f"Vector store loaded from {persist_directory}")
@@ -22,8 +23,7 @@ def retrieve_documents(db, query, k=3):
     """Retrieve relevant documents for a given query"""
     print(f"Retrieving documents for: {query}")
 
-    retriever = db.as_retriever(search_kwargs={"k": k})
-    relevant_docs = retriever.invoke(query)
+    relevant_docs = db.similarity_search(query, k=k)
 
     print(f"Found {len(relevant_docs)} relevant documents")
     return relevant_docs

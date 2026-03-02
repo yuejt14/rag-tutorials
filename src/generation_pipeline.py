@@ -2,15 +2,14 @@ from langchain_ollama import ChatOllama
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
 from langchain_core.messages import HumanMessage, AIMessage, SystemMessage
 from retrieval_pipeline import load_vector_store, retrieve_documents, format_context
+from config import OLLAMA_MODEL, OLLAMA_BASE_URL, OLLAMA_NUM_CTX
 
-NUM_CTX = 4096  # gemma3:4b context window (from Ollama config)
-MAX_HISTORY_TOKENS = int(NUM_CTX * 0.3)
+MAX_HISTORY_TOKENS = int(OLLAMA_NUM_CTX * 0.3)
 
 
 def create_llm():
     """Create an Ollama LLM instance (locally running)"""
-    llm = ChatOllama(model="gemma3:4b", base_url="http://192.168.64.1:11434")
-    return llm
+    return ChatOllama(model=OLLAMA_MODEL, base_url=OLLAMA_BASE_URL)
 
 
 def estimate_tokens(messages):
@@ -18,7 +17,7 @@ def estimate_tokens(messages):
     return sum(len(m.content) for m in messages) // 4
 
 
-def consolidate_history(history, llm):
+def consolidate_history(history, llm, token_count):
     """Summarize chat history into a single message to reclaim context space"""
     history_text = "\n".join(
         f"{'User' if isinstance(m, HumanMessage) else 'Assistant'}: {m.content}"
@@ -29,7 +28,7 @@ def consolidate_history(history, llm):
         + history_text
     )
     summary = llm.invoke(prompt).content
-    print(f"\n[History consolidated — was {estimate_tokens(history)} tokens, now summarized]\n")
+    print(f"\n[History consolidated — was {token_count} tokens, now summarized]\n")
     return [SystemMessage(content=f"Summary of earlier conversation: {summary}")]
 
 
@@ -51,8 +50,9 @@ def ask(query, db, llm, prompt_template, chat_history=None):
     if chat_history is None:
         chat_history = []
 
-    if estimate_tokens(chat_history) > MAX_HISTORY_TOKENS:
-        chat_history[:] = consolidate_history(chat_history, llm)
+    token_count = estimate_tokens(chat_history)
+    if token_count > MAX_HISTORY_TOKENS:
+        chat_history[:] = consolidate_history(chat_history, llm, token_count)
 
     relevant_docs = retrieve_documents(db, query)
     context = format_context(relevant_docs)
